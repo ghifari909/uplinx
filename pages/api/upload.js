@@ -1,7 +1,7 @@
 // pages/api/upload.js
 export const config = {
   api: {
-    bodyParser: { sizeLimit: "10mb" }, // limit Vercel
+    bodyParser: { sizeLimit: "10mb" },
   },
 };
 
@@ -29,10 +29,8 @@ export default async function handler(req, res) {
     if (!repo || !token) {
       return res.status(500).json({
         error: "Konfigurasi ENV belum lengkap",
-        detail: {
-          need: ["GITHUB_REPO", "GITHUB_TOKEN"],
-          optional: ["UPLOADS_DIR"],
-        },
+        need: ["GITHUB_REPO", "GITHUB_TOKEN"],
+        optional: ["UPLOADS_DIR"],
       });
     }
 
@@ -62,22 +60,28 @@ export default async function handler(req, res) {
 
     const result = await ghRes.json();
 
-    if (result?.content?.path) {
-      // 🔥 gunakan domain fix, bukan VERCEL_URL random
-      const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    // ✅ log detail ke Vercel console
+    console.log("GitHub API status:", ghRes.status);
+    console.log("GitHub API result:", JSON.stringify(result, null, 2));
 
+    if (result?.content?.path) {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
       const previewUrl = `${baseUrl}/api/preview?file=${encodeURIComponent(shortName)}`;
 
       return res.status(200).json({
         commit: result.commit,
         file: shortName,
-        url: previewUrl, // absolute URL: https://upv2.vercel.app/api/preview?file=xxx
+        url: previewUrl,
       });
     }
 
-    return res.status(500).json({ error: "Upload gagal", detail: result });
+    return res.status(500).json({
+      error: "Upload gagal",
+      status: ghRes.status,
+      detail: result,
+    });
   } catch (err) {
+    console.error("Upload Error:", err);
     return res.status(500).json({ error: err.message });
   }
 }
